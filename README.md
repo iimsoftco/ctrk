@@ -1,4 +1,4 @@
-# ctrk
+# ctrk v1.1alpha
 Goofball Goals Futbol level reader
 
 # Usage
