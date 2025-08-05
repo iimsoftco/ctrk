@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ctrk - Goofball Goals Futbol Tools</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #dcdcdc;
+            padding: 20px;
+        }
+        h1 {
+            color: #00ff88;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .output {
+            white-space: pre;
+            background: #2e2e2e;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ctrk - Goofball Goals Futbol Tools</h1>
+    <p>Select a <code>.trk</code> file to analyze its game objects:</p>
+    <input type="file" id="fileInput" accept=".trk">
+    <div class="output" id="output"></div>
+
+<script>
+    const getTypeName = (type) => {
+        const typeMap = {
+            "2147483648": "Goofball (Red)",
+            "1070475472": "Goofball (Blue)",
+            "1065353216": "Ball"
+        };
+        return typeMap[type.toString()] || "Unknown";
+    };
+
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const buffer = e.target.result;
+            const dataView = new DataView(buffer);
+
+            let offset = 0;
+            const objectSize = 20;
+            const objects = [];
+            const typeCounts = {};
+
+            while (offset + objectSize <= buffer.byteLength) {
+                const type  = dataView.getUint32(offset, true);
+                const group = dataView.getUint32(offset + 4, true);
+                const x     = dataView.getFloat32(offset + 8, true);
+                const y     = dataView.getFloat32(offset + 12, true);
+                const z     = dataView.getFloat32(offset + 16, true);
+
+                objects.push({ type, group, x, y, z });
+                const typeStr = type.toString();
+                typeCounts[typeStr] = (typeCounts[typeStr] || 0) + 1;
+
+                offset += objectSize;
+            }
+
+            const out = document.getElementById('output');
+            let result = `[ctrk] Loaded ${objects.length} objects:\n\n`;
+
+            objects.forEach((o, i) => {
+                const name = getTypeName(o.type);
+                result += `${i.toString().padStart(3)}. Type ID: ${o.type.toString().padStart(10)} `
+                        + `(${name.padStart(16)}) | Pos: (${o.x.toFixed(2)}, ${o.y.toFixed(2)}, ${o.z.toFixed(2)})\n`;
+            });
+
+            result += `\n[ctrk] Type Frequency:\n`;
+            for (const type in typeCounts) {
+                result += `  Type ${type.padStart(10)} (${getTypeName(Number(type))}): ${typeCounts[type]} objects\n`;
+            }
+
+            out.textContent = result;
+        };
+
+        reader.onerror = function () {
+            document.getElementById('output').textContent = '[ctrk] Error reading file.';
+        };
+
+        reader.readAsArrayBuffer(file);
+    });
+</script>
+
+</body>
+</html>
